@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Strava Running Data Analysis</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
+        .container { max-width: 1200px; margin: auto; }
+        .summary { background-color: #ffffff; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .metric { margin: 10px 0; font-size: 1.1em; }
+        .metric strong { color: #2c3e50; }
+        h1, h2 { color: #2c3e50; text-align: center; }
+        .plot-container { width: 100%; height: 800px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Strava Running Data Analysis</h1>
+
+        <div class="summary">
+            <h2>Summary Statistics</h2>
+            {{ summary_html|safe }}
+        </div>
+
+        <h2>Distribution Plots</h2>
+        <div class="plot-container">
+            {{ plot_html|safe }}
+        </div>
+    </div>
+</body>
+</html>
