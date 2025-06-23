@@ -105,7 +105,8 @@ def main():
     read_date = datetime(2025, 6, 1)
     activities = get_activities(after=read_date.timestamp())
     df = pd.DataFrame(activities)
-    print(f"Number of activities after {read_date.date().strftime("%Y-%m-%d")}:", df["type"].value_counts().to_dict())
+    read_date_str = read_date.date().strftime("%Y-%m-%d")
+    print(f"Number of activities after {read_date_str}:", df["type"].value_counts().to_dict())
 
 if __name__ == "__main__":
     main()

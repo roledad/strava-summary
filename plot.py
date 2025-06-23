@@ -10,6 +10,9 @@ import plotly.io as pio
 
 from data import decimal_to_time, time_to_decimal, get_run_data
 
+# pylint: disable=C0301
+# pylint: disable=W0612
+
 # Set plotly to render in browser
 pio.renderers.default = "browser"
 
@@ -115,7 +118,7 @@ def generate_plots(read_date=None):
 
     fig.update_layout(height=800, showlegend=False)
 
-    plot_html = pio.to_html(fig, full_html=False, include_plotlyjs='cdn')
+    plot_html = pio.to_html(fig, full_html=False, include_plotlyjs='cdn') # type: ignore
 
     return summary_html, plot_html
 
