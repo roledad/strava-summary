@@ -1,35 +1,28 @@
 """
 Plot the data
 """
-
+from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.io as pio
 
+from data import decimal_to_time, time_to_decimal, get_run_data
+
 # Set plotly to render in browser
 pio.renderers.default = "browser"
 
-
-# HELPER FUNCTIONS
-def decimal_to_time(decimal_time):
-    """Convert decimal minutes to MM:SS format."""
-    minutes = int(decimal_time)
-    seconds = int((decimal_time - minutes) * 60)
-    return f"{minutes}:{seconds:02d}"
-
-def time_to_decimal(time_str):
-    """Convert MM:SS format to decimal minutes."""
-    minutes, seconds = map(int, time_str.split(':'))
-    return minutes + seconds / 60
-
-def generate_plots():
+def generate_plots(read_date=None):
     """Generates the summary and plot HTML."""
-    run_df = pd.read_csv("strava_run_data.csv")
-
+    if read_date is None:
+        read_date = datetime.now() - timedelta(days=30)
+    run_df = get_run_data(read_date)
+    start_date = pd.to_datetime(run_df['start_date_local']).min().date().strftime("%Y-%m-%d")
+    end_date = pd.to_datetime(run_df['start_date_local']).max().date().strftime("%Y-%m-%d")
     # Calculate summary statistics
     summary_stats = {
+        'Time Period': f"{start_date} ~ {end_date}",
         'Total Distance (miles)': run_df['distance_mile'].sum(),
         'Total Moving Time (hours)': run_df['moving_time_minute'].sum() / 60,
         'Total Elevation Gain (ft)': run_df['total_elevation_gain_ft'].sum(),
@@ -39,6 +32,7 @@ def generate_plots():
     }
 
     summary_html = f"""
+        <div class="metric"><strong>Time Period:</strong> {summary_stats['Time Period']}</div>
         <div class="metric"><strong>Number of Runs:</strong> {len(run_df)}</div>
         <div class="metric"><strong>Total Distance:</strong> {summary_stats['Total Distance (miles)']:.1f} miles</div>
         <div class="metric"><strong>Total Moving Time:</strong> {summary_stats['Total Moving Time (hours)']:.1f} hours</div>

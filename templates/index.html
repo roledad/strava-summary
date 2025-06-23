@@ -2,13 +2,17 @@
 <html>
 <head>
     <title>Strava Running Data Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
-        .container { max-width: 1200px; margin: auto; }
-        .summary { background-color: #ffffff; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        body { font-family: Lato, sans-serif; margin: 20px; background-color: #f4f4f9; }
+        .container { max-width: 2000px; margin: auto; }
+        .summary { background-color: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-block; }
         .metric { margin: 10px 0; font-size: 1.1em; }
         .metric strong { color: #2c3e50; }
-        h1, h2 { color: #2c3e50; text-align: center; }
+        h1 { color: #2c3e50; text-align: center; }
+        h2 { color: #2c3e50; margin-top: 40px; }
         .plot-container { width: 100%; height: 800px; }
     </style>
 </head>
@@ -16,8 +20,8 @@
     <div class="container">
         <h1>Strava Running Data Analysis</h1>
 
+        <h2>30-day Summary Statistics</h2>
         <div class="summary">
-            <h2>Summary Statistics</h2>
             {{ summary_html|safe }}
         </div>
 
