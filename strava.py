@@ -1,13 +1,10 @@
-"""
-Strava API utils
-"""
+"""Strava API utils"""
 
 import os
 import json
 from datetime import datetime
 import requests
 import pandas as pd
-
 
 # CONFIGURATION
 CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")

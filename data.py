@@ -1,6 +1,4 @@
-"""
-Process Strava data
-"""
+"""Process Strava data"""
 
 import os
 from datetime import datetime, timedelta
@@ -55,6 +53,24 @@ def get_run_data(read_date=None):
 
     return run_df
 
+def get_summary_stats(run_df):
+    """Calculate summary statistics for the run data"""
+    start_date = pd.to_datetime(run_df['start_date_local']).min().date().strftime("%Y-%m-%d")
+    end_date = pd.to_datetime(run_df['start_date_local']).max().date().strftime("%Y-%m-%d")
+    # Calculate summary statistics
+    summary_stats = {
+        'Time Period': f"{start_date} ~ {end_date}",
+        'Number of Runs': len(run_df),
+        'Total Distance (miles)': run_df['distance_mile'].sum(),
+        'Total Moving Time (hours)': run_df['moving_time_minute'].sum() / 60,
+        'Total Elevation Gain (ft)': run_df['total_elevation_gain_ft'].sum(),
+        'Average Pace (min/mile)': decimal_to_time(run_df['pace'].apply(time_to_decimal).mean()),
+        'Average Heart Rate (bpm)': run_df['average_heartrate'].mean(),
+        'Average Watts': run_df['average_watts'].mean()
+    }
+
+    return summary_stats
+
 def main():
     """Main function"""
     read_date = datetime(2025, 6, 1)
@@ -65,6 +81,7 @@ def main():
     run_df.to_csv(file_path, index=False)
 
     # Also save latest version
+    file_path = os.path.join("data", "strava_run_data.csv")
     run_df.to_csv("strava_run_data.csv", index=False)
 
     print(f"Data saved: strava_run_data_{timestamp}.csv")
