@@ -7,6 +7,7 @@ Runs data collection and web app in the background
 import os
 import sys
 import time
+import argparse
 import subprocess
 import threading
 import signal
@@ -44,7 +45,7 @@ class StravaAgent:
                 text=True
             )
             self.processes.append(("data_collector", process))
-            logging.info(f"Data collector started with PID: {process.pid}")
+            logging.info(f"Data collector started with PID: {process.pid} (interval: {self.data_interval_hours}h)")
             return process
         except Exception as e:
             logging.error(f"Failed to start data collector: {e}")
@@ -155,7 +156,6 @@ def signal_handler(signum, frame):
     sys.exit(0)
 
 if __name__ == "__main__":
-    import argparse
 
     parser = argparse.ArgumentParser(description="Strava Data Agent")
     parser.add_argument("--port", type=int, default=5000, help="Web app port (default: 5000)")
