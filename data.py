@@ -55,6 +55,18 @@ def get_run_data(read_date=None):
 
 def get_summary_stats(run_df):
     """Calculate summary statistics for the run data"""
+    if run_df.empty:
+        return {
+            'Time Period': 'No data',
+            'Number of Runs': 0,
+            'Total Distance (miles)': 0.0,
+            'Total Moving Time (hours)': 0.0,
+            'Total Elevation Gain (ft)': 0.0,
+            'Average Pace (min/mile)': 'N/A',
+            'Average Heart Rate (bpm)': 0.0,
+            'Average Watts': 0.0
+        }
+
     start_date = pd.to_datetime(run_df['start_date_local']).min().date().strftime("%Y-%m-%d")
     end_date = pd.to_datetime(run_df['start_date_local']).max().date().strftime("%Y-%m-%d")
     # Calculate summary statistics

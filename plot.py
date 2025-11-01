@@ -25,6 +25,23 @@ def generate_summary(summary_stats: dict):
 def generate_plots(run_df):
     """Generates the plot HTML."""
 
+    if run_df.empty:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data available for the selected month.",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
+            font={"size": 16}
+        )
+        fig.update_layout(
+            xaxis={'visible': False},
+            yaxis={'visible': False},
+            height=400,
+            margin=dict(l=0, r=0, t=100, b=0)
+        )
+        return fig
+
     # Define the variables and their bin configurations
     variables_config = {
         'distance_mile': {
