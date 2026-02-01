@@ -1,24 +1,33 @@
 """Process Strava data"""
 
+import math
+import json
 import os
 from datetime import datetime, timedelta
 import pandas as pd
 from strava import get_activities
 
+# Static file for historical run data (used by cycle distribution plots)
+HISTORICAL_RUN_DATA_PATH = os.path.join("data", "strava_activities.json")
+
 # HELPER FUNCTIONS
 def decimal_to_time(decimal_time):
     """Convert decimal minutes to MM:SS format."""
+    if not math.isfinite(decimal_time):
+        return "N/A"
     minutes = int(decimal_time)
     seconds = int((decimal_time - minutes) * 60)
     return f"{minutes}:{seconds:02d}"
 
 def time_to_decimal(time_str):
     """Convert MM:SS format to decimal minutes."""
-    minutes, seconds = map(int, time_str.split(':'))
+    if time_str == "N/A" or (isinstance(time_str, float) and pd.isna(time_str)):
+        return float("nan")
+    minutes, seconds = map(int, time_str.split(":"))
     return minutes + seconds / 60
 
 def get_data(read_date=None):
-    """Get the data"""
+    """Get activity data from Strava API from read_date onward."""
     if read_date is None:
         read_date = datetime.now() - timedelta(days=30)
     activities = get_activities(after=read_date.timestamp())
@@ -27,11 +36,37 @@ def get_data(read_date=None):
     print(f"Number of activities after {read_date_str}:", df["type"].value_counts().to_dict())
     return df
 
-def get_run_data(read_date=None):
-    """Get the run data"""
-    df = get_data(read_date)
 
-    map_df = pd.DataFrame(df[df["type"].isin(["Ride", "Run"])]["map"].tolist())
+def load_run_data_from_file(filepath=None):
+    """Load run data from static JSON. Returns empty DataFrame if missing."""
+    path = filepath or HISTORICAL_RUN_DATA_PATH
+    if not os.path.isfile(path):
+        return pd.DataFrame()
+    activities = pd.DataFrame(pd.read_json(path))
+    run_df = activities[activities["type"]=="Run"].copy()
+    run_df["start_date_local"] = pd.to_datetime(run_df["start_date_local"])
+    return run_df
+
+def fetch_all_historical_data_and_save(filepath=None):
+    """Fetch all run data from API and save to static CSV. Use for initial/periodic full sync."""
+    path = filepath or HISTORICAL_RUN_DATA_PATH
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    # Request activities from year 2000 onward (covers all Strava history)
+    read_date = datetime(2026, 1, 1)
+    activities = get_activities(before=read_date.timestamp())
+
+    with open(file=path, mode='w', encoding='utf-8') as f:
+        json.dump(activities, f, indent=2)
+    print(f"Saved {len(activities)} activities to {path}")
+    return activities
+
+
+def get_run_data(df: pd.DataFrame=None, read_date=None):
+    """Get run data from API from read_date onward."""
+    if df is None:
+        df = get_data(read_date)
+
+    map_df = pd.DataFrame(df[df["type"].isin(["Run"])]["map"].tolist())
     map_df["id"] = map_df["id"].str.replace("a", "").astype(int)
 
     cols = [

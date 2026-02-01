@@ -88,7 +88,12 @@ def get_activities(after=None, before=None, per_page=30):
             print("Access token expired, refreshing...")
             access_token = refresh_access_token()
             continue  # retry with new token
-        activities = response.json()
+        data = response.json()
+        if not isinstance(data, list):
+            # API returned an error object (dict) or other non-list
+            msg = data.get("message", str(data)) if isinstance(data, dict) else str(data)
+            raise RuntimeError(f"Strava API error: {msg}")
+        activities = data
         if not activities:
             break
         all_activities.extend(activities)

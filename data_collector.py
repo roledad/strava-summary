@@ -15,7 +15,7 @@ from pathlib import Path
 # Add current directory to path for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from data import get_run_data, main as collect_data
+from data import get_run_data, fetch_all_historical_run_data_and_save
 
 # Set up logging
 logging.basicConfig(
@@ -33,29 +33,31 @@ def ensure_data_directory():
     data_dir.mkdir(exist_ok=True)
     return data_dir
 
-def collect_and_save_data():
-    """Collect Strava data and save to data folder"""
+def collect_and_save_data(all_historical=False):
+    """Collect Strava data and save to data folder.
+
+    If all_historical is True, fetches all activities from API and overwrites
+    data/strava_run_data.csv (used by cycle distribution plots).
+    Otherwise fetches last 30 days and saves timestamped + latest copy.
+    """
     try:
         logging.info("Starting data collection...")
 
-        # Ensure data directory exists
         ensure_data_directory()
 
-        # Collect data for the last 30 days by default
-        read_date = datetime.now() - timedelta(days=30)
-        run_df = get_run_data(read_date)
-
-        # Save with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_path = f"data/strava_run_data_{timestamp}.csv"
-        run_df.to_csv(file_path, index=False)
-
-        # Also save latest version
-        run_df.to_csv("data/strava_run_data.csv", index=False)
-
-        logging.info(f"Data saved: {file_path}")
-        logging.info(f"Latest data: data/strava_run_data.csv")
-        logging.info(f"Collected {len(run_df)} runs")
+        if all_historical:
+            logging.info("Fetching all historical run data from API...")
+            run_df = fetch_all_historical_run_data_and_save()
+            logging.info(f"Saved {len(run_df)} runs to data/strava_run_data.csv")
+        else:
+            read_date = datetime.now() - timedelta(days=30)
+            run_df = get_run_data(read_date)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_path = f"data/strava_run_data_{timestamp}.csv"
+            run_df.to_csv(file_path, index=False)
+            run_df.to_csv("data/strava_run_data.csv", index=False)
+            logging.info(f"Data saved: {file_path}")
+            logging.info(f"Collected {len(run_df)} runs")
 
         return True
 
@@ -104,15 +106,16 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Strava Data Collection Agent")
     parser.add_argument("--once", action="store_true", help="Run data collection once and exit")
+    parser.add_argument("--all", action="store_true", dest="all_historical",
+                        help="Fetch all historical data and save to data/strava_run_data.csv (for dashboard cycle plots)")
     parser.add_argument("--interval", type=float, default=24, help="Collection interval in hours (default: 24)")
     parser.add_argument("--minutes", type=float, help="Collection interval in minutes (overrides --interval)")
 
     args = parser.parse_args()
 
-    # Convert minutes to hours if specified
     interval_hours = args.minutes / 60 if args.minutes else args.interval
 
     if args.once:
-        collect_and_save_data()
+        collect_and_save_data(all_historical=args.all_historical)
     else:
         run_continuous_collection(interval_hours)

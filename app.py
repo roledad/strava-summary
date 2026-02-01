@@ -1,73 +1,90 @@
 """Run the app"""
+import os
+from datetime import datetime
 
-from data import get_run_data, get_summary_stats
+from data import get_run_data, get_summary_stats, load_run_data_from_file
 from plot import generate_plots, generate_summary
 
 from flask import Flask, render_template_string, jsonify, request
 import plotly.io as pio
-import os
-from datetime import datetime
 # Set plotly to render in browser
 pio.renderers.default = "browser"
 
 app = Flask(__name__)
 
-MONTH_OPTIONS = [
-    ("july", "July"),
-    ("august", "August"),
-    ("september", "September"),
-    ("october", "October"),
-]
-MONTH_TO_NUMBER = {key: idx for idx, (key, _) in enumerate(MONTH_OPTIONS, start=7)}
-DEFAULT_MONTH_KEY = MONTH_OPTIONS[-1][0]
+CYCLE_OPTIONS = {
+    "2025 Indy Marathon": {"start_date": datetime(2025, 7, 21), "end_date": datetime(2025, 11, 8)},
+    "2025 NYC/Brooklyn Half Marathon": {"start_date": datetime(2025, 2, 2), "end_date": datetime(2025, 5, 17)},
+    "2024 Brooklyn Half Marathon": {"start_date": datetime(2024, 1, 1), "end_date": datetime(2024, 5, 18)},
+    "2022 Twin-Cities Marathon": {"start_date": datetime(2022, 5, 16), "end_date": datetime(2022, 10, 2)},
+    "2021 CIM Marathon": {"start_date": datetime(2021, 6, 21), "end_date": datetime(2021, 10, 2)},
+    "2020 NYC Virtual Marathon": {"start_date": datetime(2020, 8, 9), "end_date": datetime(2020, 10, 17)},
+    "2019 Twin-Cities Marathon": {"start_date": datetime(2019, 7, 29), "end_date": datetime(2019, 10, 6)},
+}
+
+CYCLE_OPTIONS_LIST = [(key, key) for key in CYCLE_OPTIONS]
+# Dropdown: YTD first (default), then all cycles
+PLOT_OPTIONS_LIST = [("YTD", "YTD")] + CYCLE_OPTIONS_LIST
+DEFAULT_PLOT_KEY = "YTD"
 
 @app.route('/')
 def home():
     """Generate the plot and summary HTML"""
-    selected_month = request.args.get('month', DEFAULT_MONTH_KEY).lower()
-    if selected_month not in MONTH_TO_NUMBER:
-        selected_month = DEFAULT_MONTH_KEY
+    selected_cycle = request.args.get('cycle', DEFAULT_PLOT_KEY)
+    valid_plot_keys = {"YTD"} | set(CYCLE_OPTIONS)
+    if selected_cycle not in valid_plot_keys:
+        selected_cycle = DEFAULT_PLOT_KEY
 
-    # Determine the data year to fetch (use previous year if current month < July)
-    now = datetime.now()
-    min_month_number = min(MONTH_TO_NUMBER.values())
-    data_year = now.year if now.month >= min_month_number else now.year - 1
+    # YTD stats: read from API (for YTD card and for default plot)
+    ytd_start = datetime(datetime.now().year, 1, 1)
+    run_df_ytd = get_run_data(read_date=ytd_start)
+    if run_df_ytd.empty:
+        ytd_summary_html = '<div class="metric">No YTD data from API.</div>'
+    else:
+        ytd_summary_html = generate_summary(get_summary_stats(run_df_ytd))
 
-    # Reload data on each request to get latest activities
-    read_date = datetime(data_year, min_month_number, 1)
-    run_df = get_run_data(read_date)
+    # Cycle data: read from static file (no API call)
+    run_df = load_run_data_from_file()
+    if not run_df.empty:
+        run_df = get_run_data(df=run_df)
 
-    month_label_map = dict(MONTH_OPTIONS)
-    month_data_map = {}
+    cycle_data_map = {}
     summary_sections = []
+    empty_df = run_df.iloc[0:0].copy() if not run_df.empty else run_df.copy()
 
-    for month_key, month_label in MONTH_OPTIONS:
-        month_number = MONTH_TO_NUMBER[month_key]
-        run_df_month = run_df[
-            (run_df['start_date_local'].dt.month == month_number) &
-            (run_df['start_date_local'].dt.year == data_year)
-        ].copy()
-
-        month_data_map[month_key] = run_df_month
-
-        if run_df_month.empty:
-            month_summary_html = '<div class="metric">No data available for this month.</div>'
+    for cycle_key, opts in CYCLE_OPTIONS.items():
+        start_d, end_d = opts["start_date"], opts["end_date"]
+        if run_df.empty:
+            run_df_cycle = run_df.copy()
         else:
-            summary_stats = get_summary_stats(run_df_month)
-            month_summary_html = generate_summary(summary_stats)
+            run_df_cycle = run_df[
+                (run_df["start_date_local"].dt.date >= start_d.date()) &
+                (run_df["start_date_local"].dt.date <= end_d.date())
+            ].copy()
+        cycle_data_map[cycle_key] = run_df_cycle
+
+        if run_df_cycle.empty:
+            cycle_summary_html = '<div class="metric">No data available for this cycle.</div>'
+        else:
+            summary_stats = get_summary_stats(run_df_cycle)
+            cycle_summary_html = generate_summary(summary_stats)
 
         summary_sections.append({
-            'key': month_key,
-            'label': f"{month_label} {data_year}",
-            'html': month_summary_html
+            'key': cycle_key,
+            'label': cycle_key,
+            'html': cycle_summary_html
         })
 
-    run_df_selected = month_data_map.get(selected_month, run_df.iloc[0:0])
+    # Distribution plot: YTD (from API) or selected cycle (from file)
+    if selected_cycle == "YTD":
+        run_df_selected = run_df_ytd
+        selected_cycle_display = f"{datetime.now().year} YTD"
+    else:
+        run_df_selected = cycle_data_map.get(selected_cycle, empty_df)
+        selected_cycle_display = selected_cycle
 
     fig = generate_plots(run_df_selected)
     plot_html = pio.to_html(fig, full_html=False, include_plotlyjs='cdn') # type: ignore
-
-    selected_month_display = f"{month_label_map[selected_month]} {data_year}"
 
     # Read the main HTML template
     with open('templates/index.html', 'r', encoding='utf-8') as f:
@@ -79,9 +96,11 @@ def home():
         summary_sections=summary_sections,
         plot_html=plot_html,
         last_updated=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        month_options=MONTH_OPTIONS,
-        selected_month=selected_month,
-        selected_month_display=selected_month_display
+        cycle_options=PLOT_OPTIONS_LIST,
+        selected_cycle=selected_cycle,
+        selected_cycle_display=selected_cycle_display,
+        ytd_summary_html=ytd_summary_html,
+        ytd_year=datetime.now().year,
     )
 
 @app.route('/refresh')
@@ -92,13 +111,14 @@ def refresh():
 
 @app.route('/api/status')
 def status():
-    """API endpoint to check if new data is available"""
+    """API endpoint: YTD run count and latest activity from API."""
     try:
-        run_df = get_run_data()
+        ytd_start = datetime(datetime.now().year, 1, 1)
+        run_df = get_run_data(read_date=ytd_start)
         return jsonify({
             'status': 'success',
             'last_updated': datetime.now().isoformat(),
-            'data_points': len(run_df),
+            'ytd_runs': len(run_df),
             'latest_activity': run_df['start_date_local'].max() if len(run_df) > 0 else None
         })
     except Exception as e:
