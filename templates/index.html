@@ -9,9 +9,6 @@
         body { font-family: Lato, sans-serif; margin: 20px; background-color: #f4f4f9; }
         .container { max-width: 2000px; margin: auto; }
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 20px; }
-        .cycle-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; }
-        @media (max-width: 1200px) { .cycle-summary-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 600px) { .cycle-summary-grid { grid-template-columns: 1fr; } }
         .summary { background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .metric { margin: 10px 0; font-size: 1.1em; }
         .metric strong { color: #2c3e50; }
@@ -47,17 +44,9 @@
             <p><small>Last updated: {{ last_updated }}</small></p>
         </div>
 
-        <h2>YTD Summary Statistics (from API)</h2>
-        <div class="summary-grid">
-            <div class="summary">
-                <h3>{{ ytd_year }} Year to Date</h3>
-                {{ ytd_summary_html|safe }}
-            </div>
-        </div>
-
         <div class="filter-wrapper">
             <div class="filter-controls">
-                <label for="cycle-select">Plot period:</label>
+                <label for="cycle-select">Data period:</label>
                 <select id="cycle-select" class="month-select" onchange="onCycleChange(this.value)">
                     {% for key, label in cycle_options %}
                     <option value="{{ key }}" {% if key == selected_cycle %}selected{% endif %}>{{ label }}</option>
@@ -66,19 +55,17 @@
             </div>
         </div>
 
+        <h2>Summary Statistics</h2>
+        <div class="summary-grid">
+            <div class="summary">
+                <h3>{{ selected_cycle_display }}</h3>
+                {{ summary_html|safe }}
+            </div>
+        </div>
+
         <h2>{{ selected_cycle_display }} Distribution Plots</h2>
         <div class="plot-container">
             {{ plot_html|safe }}
-        </div>
-
-        <h2>Cycle Summary Statistics</h2>
-        <div class="cycle-summary-grid">
-            {% for section in summary_sections %}
-            <div class="summary">
-                <h3>{{ section.label }}</h3>
-                {{ section.html|safe }}
-            </div>
-            {% endfor %}
         </div>
     </div>
     <script>

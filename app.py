@@ -35,13 +35,9 @@ def home():
     if selected_cycle not in valid_plot_keys:
         selected_cycle = DEFAULT_PLOT_KEY
 
-    # YTD stats: read from API (for YTD card and for default plot)
+    # YTD data: read from API
     ytd_start = datetime(datetime.now().year, 1, 1)
     run_df_ytd = get_run_data(read_date=ytd_start)
-    if run_df_ytd.empty:
-        ytd_summary_html = '<div class="metric">No YTD data from API.</div>'
-    else:
-        ytd_summary_html = generate_summary(get_summary_stats(run_df_ytd))
 
     # Cycle data: read from static file (no API call)
     run_df = load_run_data_from_file()
@@ -49,7 +45,6 @@ def home():
         run_df = get_run_data(df=run_df)
 
     cycle_data_map = {}
-    summary_sections = []
     empty_df = run_df.iloc[0:0].copy() if not run_df.empty else run_df.copy()
 
     for cycle_key, opts in CYCLE_OPTIONS.items():
@@ -63,25 +58,19 @@ def home():
             ].copy()
         cycle_data_map[cycle_key] = run_df_cycle
 
-        if run_df_cycle.empty:
-            cycle_summary_html = '<div class="metric">No data available for this cycle.</div>'
-        else:
-            summary_stats = get_summary_stats(run_df_cycle)
-            cycle_summary_html = generate_summary(summary_stats)
-
-        summary_sections.append({
-            'key': cycle_key,
-            'label': cycle_key,
-            'html': cycle_summary_html
-        })
-
-    # Distribution plot: YTD (from API) or selected cycle (from file)
+    # Selected period: YTD (from API) or cycle (from file)
     if selected_cycle == "YTD":
         run_df_selected = run_df_ytd
         selected_cycle_display = f"{datetime.now().year} YTD"
     else:
         run_df_selected = cycle_data_map.get(selected_cycle, empty_df)
         selected_cycle_display = selected_cycle
+
+    # Summary stats for the selected period
+    if run_df_selected.empty:
+        summary_html = '<div class="metric">No data available for this period.</div>'
+    else:
+        summary_html = generate_summary(get_summary_stats(run_df_selected))
 
     fig = generate_plots(run_df_selected)
     plot_html = pio.to_html(fig, full_html=False, include_plotlyjs='cdn') # type: ignore
@@ -93,14 +82,12 @@ def home():
     # Render the template with the generated HTML
     return render_template_string(
         template_content,
-        summary_sections=summary_sections,
         plot_html=plot_html,
         last_updated=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         cycle_options=PLOT_OPTIONS_LIST,
         selected_cycle=selected_cycle,
         selected_cycle_display=selected_cycle_display,
-        ytd_summary_html=ytd_summary_html,
-        ytd_year=datetime.now().year,
+        summary_html=summary_html,
     )
 
 @app.route('/refresh')
