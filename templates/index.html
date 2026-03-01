@@ -55,16 +55,6 @@
             </div>
         </div>
 
-        <h2>Cycle Summary Statistics</h2>
-        <div class="cycle-summary-grid">
-            {% for section in summary_sections %}
-            <div class="summary">
-                <h3>{{ section.label }}</h3>
-                {{ section.html|safe }}
-            </div>
-            {% endfor %}
-        </div>
-
         <div class="filter-wrapper">
             <div class="filter-controls">
                 <label for="cycle-select">Plot period:</label>
@@ -79,6 +69,16 @@
         <h2>{{ selected_cycle_display }} Distribution Plots</h2>
         <div class="plot-container">
             {{ plot_html|safe }}
+        </div>
+
+        <h2>Cycle Summary Statistics</h2>
+        <div class="cycle-summary-grid">
+            {% for section in summary_sections %}
+            <div class="summary">
+                <h3>{{ section.label }}</h3>
+                {{ section.html|safe }}
+            </div>
+            {% endfor %}
         </div>
     </div>
     <script>
